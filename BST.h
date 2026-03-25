@@ -1,28 +1,19 @@
 #pragma once
-
+#include "NodeAndRec.h"
 #include <iostream>
 using std::cout;
 
 template <typename TKey, typename TValue>
 class TP_BST
 {
-	struct TableRec
-	{
-		TKey key;
-		TValue value;
-	};
-	struct TP_Node
-	{
-		TableRec data;
-		TP_Node* left;
-		TP_Node* right;
-		TP_Node* parent;
-	};
-	TP_Node* pRoot; //корень дерева
-	void MainPrint(TP_Node* p)
+protected:
+	Node<TKey, TValue>* pRoot = nullptr; //корень дерева bst
+	//вывод
+	void MainPrint(Node<TKey, TValue>* p)
 	{
 		if (p == nullptr) return;
-		std::cout << p->data.key << " - " << p->data.value << " ";
+		//<< " - " << p->data.value
+		std::cout << p->color << p->data.key << " ";
 		if (p->left)
 		{
 			std::cout << " left ";
@@ -36,12 +27,6 @@ class TP_BST
 		cout << "\n";
 	}
 public:
-	//Обход
-	//Поиск элемента с заданным ключом
-	//Добавление нового элемента
-	//Удаление элемента	
-	//Поиск элемента с минимальным или максимальным ключом
-	//Поиск предыдущего или последующего элемент для заданного ключа
 	void Print()
 	{
 		cout << "Table\n";
@@ -51,10 +36,15 @@ public:
 	{
 		pRoot = nullptr;
 	}
-	TP_Node* Find(TKey key)
+	~TP_BST()
+	{
+		pRoot = nullptr;
+		delete pRoot;
+	}
+	Node<TKey, TValue>* Find(TKey key)
 	{
 		if (!pRoot) return nullptr;
-		TP_Node* result = pRoot;
+		Node<TKey, TValue>* result = pRoot;
 		while(result)
 		{
 			if (result->data.key > key)
@@ -72,10 +62,12 @@ public:
 		}
 		return result;
 	}
-	void Insert(TKey key, TValue value)
+	virtual void Insert(TKey key, TValue value)
 	{
-		TP_Node* goal = new TP_Node{ key, value };
-		TP_Node* result = pRoot;
+		Node<TKey, TValue>* goal = new Node<TKey, TValue>;
+		goal->data.key = key;
+		goal->data.value = value;
+		Node<TKey, TValue>* result = pRoot;
 		while (result)
 		{
 			if (result->data.key > key)
@@ -107,10 +99,15 @@ public:
 		}
 		pRoot = goal;
 	}
-	void Delete(TKey key)
+	virtual void Delete(TKey key)
 	{
-		TP_Node* node_to_delete = Find(key);
+		Node<TKey, TValue>* node_to_delete = Find(key);
 		if (!node_to_delete) return; //удаляем того чего нет, удаляем пустоту ура
+		if (node_to_delete == pRoot)
+		{
+			pRoot = nullptr;
+			return;
+		}
 		if (node_to_delete->left==nullptr&&node_to_delete->right==nullptr)
 		{
 			//ура у нас лист
@@ -130,10 +127,12 @@ public:
 			if (node_to_delete->parent->left == node_to_delete)
 			{
 				node_to_delete->parent->left = node_to_delete->right;
+				node_to_delete->right->parent = node_to_delete->parent;
 			}
 			else if (node_to_delete->parent->right == node_to_delete)
 			{
 				node_to_delete->parent->right = node_to_delete->right;
+				node_to_delete->right->parent = node_to_delete->parent;
 			}
 			delete node_to_delete;
 		}
@@ -143,16 +142,18 @@ public:
 			if (node_to_delete->parent->left == node_to_delete)
 			{
 				node_to_delete->parent->left = node_to_delete->left;
+				node_to_delete->left->parent = node_to_delete->parent;
 			}
 			else if (node_to_delete->parent->right == node_to_delete)
 			{
 				node_to_delete->parent->right = node_to_delete->left;
+				node_to_delete->left->parent = node_to_delete->parent;
 			}
 			delete node_to_delete;
 		}
 		else if (node_to_delete->left != nullptr && node_to_delete->right != nullptr)
 		{
-			TP_Node* result_to_swap;
+			Node<TKey, TValue>* result_to_swap;
 			result_to_swap = node_to_delete->right;
 			while(result_to_swap->left != nullptr)
 			{
@@ -165,6 +166,5 @@ public:
 				result_to_swap->parent->left = nullptr;
 			delete result_to_swap;
 		}
-
 	}
 };
