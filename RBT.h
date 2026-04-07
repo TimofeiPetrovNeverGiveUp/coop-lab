@@ -3,6 +3,7 @@
 #include "BST.h"
 #include <iostream>
 #include "NodeAndRec.h"
+#include <vector>
 
 using std::cout;
 
@@ -160,162 +161,224 @@ private:
 		}
 		pRoot->color = 'B';
 	}
-	void re_balance(Node<TKey, TValue>* P, Node<TKey, TValue>* B)
+	using TP_BST<TKey, TValue>::pRoot;
+	std::vector<Node<TKey, TValue>*> leafs;
+	void find_leaf(Node<TKey, TValue>* node_to_find)
 	{
-		if (B)
+		if (!node_to_find->left && !node_to_find->right)
 		{
-			if (P->color == 'R') 
+			leafs.push_back(node_to_find);
+			return;
+		}
+		if (node_to_find->left)
+			find_leaf(node_to_find->left);
+		if (node_to_find->right)
+			find_leaf(node_to_find->right);
+	}
+	int height_count(Node<TKey, TValue>* node_to_count)
+	{
+		int result = 0;
+		while (node_to_count)
+		{
+			if (node_to_count->color == 'B') result++;
+			node_to_count = node_to_count->parent;
+		}
+		return result;
+	}
+	bool color_check(Node<TKey, TValue>* node_to_check)
+	{
+		char previous_color = 'Z';
+		while (node_to_check)
+		{
+			if (node_to_check->color == previous_color && previous_color == 'R')
 			{
-				if (B->color == 'B') 
-				{
-					if (B->left && B->left->color=='R') //6.1
-					{
-						Node<TKey, TValue>* C = B->left;
-						Node<TKey, TValue>* Z = P->parent;
-						if (Z)
-						{
-							C->parent = Z;
-							if (Z->left == P)
-							{
-								Z->left = C;
-							}
-							else
-							{
-								Z->right = C;
-							}
-						}
-						//родитель изменился но детей не бросили
-						if (C->right)
-						{
-							B->left = C->right;
-							C->right->parent = B;
-						}
-						if (C->left)
-						{
-							P->right = C->left;
-							C->left->parent = P;
-						}
-						C->left = P;
-						P->parent = C;
-						C->right = B;
-						B->parent = C;
-					}
-					else if (B->right && B->right->color=='R') //6.1
-					{
-						//с правый потомк B тяжело
-					}
-					else if (B->right && B->left && B->right->color=='B' && B->left->color=='B') //6.2
-					{
-						P->color = 'B';
-						B->color = 'R';
-					}
-				}
+				return false;
 			}
-			else //P->color=='B', True
+			previous_color = node_to_check->color;
+			node_to_check = node_to_check->parent;
+		}
+		return true;
+	}
+	void re_balance(Node<TKey, TValue>* x, Node<TKey, TValue>* father)
+	{
+		//ЭТО КОРМЕН
+		while (x != pRoot && (x == nullptr || x->color == 'B'))
+		{
+			if (x == father->left)
 			{
-				if (B->color == 'R')
+				Node<TKey, TValue>* w = father->right;
+				if (w && w->color == 'R') //1 кормен
 				{
-					if (B->left && B->left->color == 'B') 
+					w->color = 'B';
+					father->color = 'R';
+					//поворот левый
+					if (father->right == w)
 					{
-						if (B->left->left && B->left->left->color == 'R')//6.3(1)
+						Node<TKey, TValue>* T1 = w->left;
+						if (father->parent)
 						{
-							//то же что и в 6.3(2), только поменяли местами P, D
-							Node<TKey, TValue>* C = B->left;
-							Node<TKey, TValue>* D = B->left->left;
-							Node<TKey, TValue>* T1 = C->right;
-							Node<TKey, TValue>* Z = P->parent;
-							if (Z)
-							{
-								C->parent = Z;
-								if (Z->left == P)
-								{
-									Z->left = C;
-								}
-								else
-								{
-									Z->right = C;
-								}
-							}
-							//чертовщина
-							C->left = D;
-							D->parent = C;
-							C->right = B;
-							B->parent = C;
-							B->left = P;
-							P->parent = B;
-							P->right = T1;
-							T1->parent = P;
-							//перекрашивать не надо вроде
+							if (father->parent->left == father) father->parent->left = w;
+							else father->parent->right = w;
 						}
-						else if (B->left->right && B->left->right->color == 'R')//6.3(2)
-						{
-							Node<TKey, TValue>* D = B->left->right;
-							Node<TKey, TValue>* C = P->right->left;
-							Node<TKey, TValue>* T1 = C->left;
-							Node<TKey, TValue>* Z = P->parent;
-							if (Z)
-							{
-								C->parent = Z;
-								if (Z->left == P)
-								{
-									Z->left = C;
-								}
-								else
-								{
-									Z->right = C;
-								}
-							}
-							//чертовщина
-							C->left = P;
-							P->parent = C;
-							P->right = T1;
-							T1->parent = P;
-							C->right = B;
-							B->parent = C;
-							B->left = D;
-							D->parent = B;
-							D->color = 'B';
-						}
-						else if (B->left->left && B->left->right && B->left->left->color=='B' && B->left->right->color=='B')//6.4
-						{
-							
-						}
+						else pRoot = w;
+						w->parent = father->parent;
+						father->parent = w;
+						father->right = T1;
+						if (T1) T1->parent = father;
+						w->left = father;
 					}
-					else if (B->right && B->right->color == 'B')
+					else
 					{
-						if (B->right->left && B->right->left->color == 'R')//6.3(3)
+						Node<TKey, TValue>* T1 = w->right;
+						if (father->parent)
 						{
-
+							if (father->parent->left == father) father->parent->left = w;
+							else father->parent->right = w;
 						}
-						if (B->right->right && B->right->right->color == 'R')//6.3(4)
-						{
-
-						}
-						else if (B->right->left && B->right->right && B->right->left->color == 'B' && B->right->right->color == 'B')//6.4
-						{
-
-						}
+						else pRoot = w;
+						w->parent = father->parent;
+						father->parent = w;
+						father->left = T1;
+						if (T1) T1->parent = father;
+						w->right = father;
 					}
+					w = father->right;
+				}
+				if ((w == nullptr || w->left == nullptr || w->left->color == 'B') && (w == nullptr || w->right == nullptr || w->right->color == 'B'))
+				//2 кормен
+				{
+					if (w) w->color = 'R';
+					x = father;
+					father = x->parent;
 				}
 				else
 				{
-					if (B->left && B->left->color == 'R') //6.5
+					if (w && (w->right == nullptr || w->right->color == 'B')) //3 кормен
 					{
-	
+						if (w->left) w->left->color = 'B';
+						w->color = 'R';
+						//поврот правый
+						Node<TKey, TValue>* C = w->left;
+						w->left = C->right;
+						if (C->right) C->right->parent = w;
+						C->right = w;
+						w->parent = C;
+						father->right = C;
+						C->parent = father;
+						w = C;
 					}
-					else if (B->right && B->right->color == 'R') //6.5
+					if (w) //4 кормен
 					{
-						
+						w->color = father->color;
+						father->color = 'B';
+						if (w->right) w->right->color = 'B';
+						//поворот левый
+						Node<TKey, TValue>* Z = father->parent;
+						if (Z)
+						{
+							if (Z->left == father) Z->left = w;
+							else Z->right = w;
+						}
+						else pRoot = w;
+						w->parent = Z;
+						father->parent = w;
+						father->right = w->left;
+						if (w->left) w->left->parent = father;
+						w->left = father;
 					}
-					else if (B->left && B->right && B->left->color == 'B' && B->right->color == 'B') //6.6
+					x = pRoot;
+					break;
+				}
+			}
+			else //симметричный фрагмент с заменой left на right
+			{
+				Node<TKey, TValue>* w = father->left;
+				if (w && w->color == 'R') //1 кормен
+				{
+					w->color = 'B';
+					father->color = 'R';
+					if (father->left == w)
 					{
-						
+						Node<TKey, TValue>* T1 = w->right;
+						if (father->parent)
+						{
+							if (father->parent->left == father) father->parent->left = w;
+							else father->parent->right = w;
+						}
+						else pRoot = w;
+						w->parent = father->parent;
+						father->parent = w;
+						father->left = T1;
+						if (T1) T1->parent = father;
+						w->right = father;
 					}
+					else
+					{
+						Node<TKey, TValue>* T1 = w->left;
+						if (father->parent)
+						{
+							if (father->parent->left == father) father->parent->left = w;
+							else father->parent->right = w;
+						}
+						else pRoot = w;
+						w->parent = father->parent;
+						father->parent = w;
+						father->right = T1;
+						if (T1) T1->parent = father;
+						w->left = father;
+					}
+					w = father->left;
+				}
+				if ((w == nullptr || w->right == nullptr || w->right->color == 'B') && (w == nullptr || w->left == nullptr || w->left->color == 'B'))
+				//2 кормен
+				{
+					if (w) w->color = 'R';
+					x = father;
+					father = x->parent;
+				}
+				else
+				{
+					if (w && (w->left == nullptr || w->left->color == 'B')) //3 кормен
+					{
+						if (w->right) w->right->color = 'B';
+						w->color = 'R';
+						Node<TKey, TValue>* C = w->right;
+						w->right = C->left;
+						if (C->left) C->left->parent = w;
+						C->left = w;
+						w->parent = C;
+						father->left = C;
+						C->parent = father;
+						w = C;
+					}
+					if (w) //4 кормен
+					{
+						w->color = father->color;
+						father->color = 'B';
+						if (w->left) w->left->color = 'B';
+						Node<TKey, TValue>* Z = father->parent;
+						if (Z)
+						{
+							if (Z->left == father) Z->left = w;
+							else Z->right = w;
+						}
+						else pRoot = w;
+						w->parent = Z;
+						father->parent = w;
+						father->left = w->right;
+						if (w->right) w->right->parent = father;
+						w->right = father;
+					}
+					x = pRoot;
+					break;
 				}
 			}
 		}
+		if (x) 
+		{
+			x->color = 'B';
+		}
 	}
-	using TP_BST<TKey, TValue>::pRoot;
 public:
 	void Insert(TKey key, TValue value) override
 	{
@@ -366,100 +429,141 @@ public:
 	{
 		Node<TKey, TValue>* node_to_delete = TP_BST<TKey, TValue>::Find(key);
 		if (!node_to_delete) return;
-		if (node_to_delete->color == 'R') //red
+		Node<TKey, TValue>* y = node_to_delete;
+		Node<TKey, TValue>* x = nullptr;
+		Node<TKey, TValue>* father = nullptr;
+		char y_original_color = y->color;
+
+		if (node_to_delete->left == nullptr)
 		{
-			if (node_to_delete->left == nullptr && node_to_delete->right == nullptr)
+			x = node_to_delete->right;
+			if (x)
+				x->parent = node_to_delete->parent;//только правый потомок
+			if (node_to_delete->parent == nullptr)
 			{
-				if (node_to_delete->parent->left == node_to_delete)
-				{
-					node_to_delete->parent->left = nullptr;
-				}
-				else if (node_to_delete->parent->right == node_to_delete)
-				{
-					node_to_delete->parent->right = nullptr;
-				}
-				delete node_to_delete;
+				pRoot = x; //корень это вершина для удаления и если удаляем только его то он итак null
 			}
-			else if (node_to_delete->left != nullptr && node_to_delete->right != nullptr)
+			//подключили x
+			else if (node_to_delete == node_to_delete->parent->left)
 			{
-				Node<TKey, TValue>* result_to_swap;
-				result_to_swap = node_to_delete->right;
-				while (result_to_swap->left != nullptr)
+				node_to_delete->parent->left = x;
+			}
+			else
+			{
+				node_to_delete->parent->right = x;
+			}
+			father = node_to_delete->parent;
+			delete node_to_delete;
+		}
+		else if (node_to_delete->right == nullptr)
+		{
+			x = node_to_delete->left;
+			if (x)
+			{
+				x->parent = node_to_delete->parent;	//только левый потомок
+			}
+			if (node_to_delete->parent == nullptr)
+			{
+				pRoot = x;//корень это вершина для удаления и если удаляем только его то он итак null
+			}
+			//подключили x
+			else if (node_to_delete == node_to_delete->parent->left)
+			{
+				node_to_delete->parent->left = x;
+			}
+			else
+			{
+				node_to_delete->parent->right = x;
+			}
+			father = node_to_delete->parent;
+			delete node_to_delete;
+		}
+		else
+		{
+			//узел
+			y = node_to_delete->right;
+			while (y->left != nullptr)
+			{
+				y = y->left;
+			}
+			//меняем данные
+			y_original_color = y->color;
+			x = y->right;
+			//вдруг у у был ребенок
+			if (x)
+			{
+				x->parent = y->parent;
+			}
+			if (y->parent == node_to_delete) //если y ребенок node_to_delete
+			{
+				father = y;
+			}
+			else // у не ребенок node_to_check
+			{
+				if (x)
 				{
-					result_to_swap = result_to_swap->left;
+					x->parent = y->parent;
 				}
-				node_to_delete->data = result_to_swap->data;
-				if (result_to_swap->parent->right == result_to_swap)
-					result_to_swap->parent->right = nullptr;
-				else if (result_to_swap->parent->left == result_to_swap)
-					result_to_swap->parent->left = nullptr;
-				delete result_to_swap;
+				if (y->parent->left == y)
+				{
+					y->parent->left = x;
+				}
+				else
+					y->parent->right = x;
+				y->right = node_to_delete->right;
+				node_to_delete->right->parent = y;
+				father = y->parent;
+			}
+			if (node_to_delete->parent == nullptr)
+			{
+				pRoot = y;
+			}
+			else if (node_to_delete->parent->left == node_to_delete)
+			{
+				node_to_delete->parent->left = y;
+			}
+			else
+			{
+				node_to_delete->parent->right = y;
+			}
+			y->parent = node_to_delete->parent;
+			y->left = node_to_delete->left;
+			node_to_delete->left->parent = y;
+			y->color = node_to_delete->color; //и меняем цвет
+			delete node_to_delete;
+		}
+		//re balance если черный
+		if (y_original_color == 'B')
+		{
+			re_balance(x, father);
+		}
+	}
+	bool is_it_rbt()
+	{
+		if (!pRoot) return true;
+		leafs.clear();
+		find_leaf(pRoot);
+		//height check
+		int main_height = 0;
+		for (int i = 0; i < leafs.size(); ++i)
+		{
+			if (main_height == 0)
+			{
+				main_height = height_count(leafs[i]);
+			}
+			if (height_count(leafs[i]) != main_height)
+			{
+				return false;
 			}
 		}
-		else //black
+		//color check
+		for (int i = 0; i < leafs.size(); ++i)
 		{
-			if (node_to_delete->left == nullptr && node_to_delete->right == nullptr)
+			if (!color_check(leafs[i]))
 			{
-				Node<TKey, TValue>* B = nullptr;
-				Node<TKey, TValue>* P = node_to_delete->parent; //hight changed
-				if (node_to_delete->parent->left == node_to_delete)
-				{
-					node_to_delete->parent->left = nullptr;
-					B = node_to_delete->parent->right;
-				}
-				else if (node_to_delete->parent->right == node_to_delete)
-				{
-					node_to_delete->parent->right = nullptr;
-					B = node_to_delete->parent->left;
-				}
-				delete node_to_delete;
-				re_balance(P, B); //balance
-			}
-			else if (node_to_delete->left == nullptr && node_to_delete->right != nullptr)
-			{
-				//только правый потомок
-				if (node_to_delete->parent->left == node_to_delete)
-				{
-					node_to_delete->parent->left = node_to_delete->right;
-					node_to_delete->right->parent = node_to_delete->parent;
-				}
-				else if (node_to_delete->parent->right == node_to_delete)
-				{
-					node_to_delete->parent->right = node_to_delete->right;
-					node_to_delete->right->parent = node_to_delete->parent;
-				}
-				delete node_to_delete;
-			}
-			else if (node_to_delete->left != nullptr && node_to_delete->right == nullptr)
-			{
-				//только левый потомок
-				if (node_to_delete->parent->left == node_to_delete)
-				{
-					node_to_delete->parent->left = node_to_delete->left;
-					node_to_delete->left->parent = node_to_delete->parent;
-				}
-				else if (node_to_delete->parent->right == node_to_delete)
-				{
-					node_to_delete->parent->right = node_to_delete->left;
-					node_to_delete->left->parent = node_to_delete->parent;
-				}
-				delete node_to_delete;
-			}
-			else if (node_to_delete->left != nullptr && node_to_delete->right != nullptr)
-			{
-				Node<TKey, TValue>* result_to_swap;
-				result_to_swap = node_to_delete->right;
-				while (result_to_swap->left != nullptr)
-				{
-					result_to_swap = result_to_swap->left;
-				}
-				node_to_delete->data = result_to_swap->data;
-				if (result_to_swap->parent->right == result_to_swap)
-					result_to_swap->parent->right = nullptr;
-				else if (result_to_swap->parent->left == result_to_swap)
-					result_to_swap->parent->left = nullptr;
-				delete result_to_swap;
+				return false;
 			}
 		}
+		return true;
 	}
 };
