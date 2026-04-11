@@ -2,7 +2,7 @@
 #include <vector>
 #include <functional>
 #include <utility>
-
+#include <iostream>
 //index = hash % the_size
 
 template <typename TKey, typename TValue>
@@ -25,25 +25,22 @@ private:
 	HashTableRec* the_table;
 	void ReHash()
 	{
+		int old_size = the_size;
 		the_size *= 2; //the_size * 2
 		HashTableRec* the_table2 = new HashTableRec[the_size];
 		the_count = 0;
-		for (int i = 0; i < the_size/2; ++i)
+		for (int i = 0; i < old_size; ++i)
 		{
 			if (the_table[i].state == 1)
 			{
-				TheInsert(the_table[i].Key, the_table[i].Value, the_table2);
+				TheInsert(the_table[i].Key, the_table[i].Value, the_table2, false);
 			}
 		}
 		delete[] the_table;
 		the_table = the_table2;
 	}
-	void TheInsert(TKey key, TValue value, HashTableRec* where)
+	void TheInsert(TKey key, TValue value, HashTableRec* where, bool helpy)
 	{
-		if ((the_count / (the_size * 1.0)) > the_stop)
-		{
-			ReHash();
-		}
 		int index = 0;
 		//uses linear PROBIROVANIE
 		for (int i = 0; i < the_size; ++i)
@@ -62,6 +59,10 @@ private:
 				where[index].Value = value;
 				return;
 			}
+		}
+		if ((the_count / (the_size * 1.0)) > the_stop && helpy)
+		{
+			ReHash();
 		}
 	}
 public:
@@ -105,7 +106,7 @@ public:
 	}
 	void Insert(TKey key, TValue value)
 	{
-		TheInsert(key, value, the_table);
+		TheInsert(key, value, the_table, true);
 	}
 	void Delete(TKey key)
 	{
@@ -127,5 +128,12 @@ public:
 	int GetSize() 
 	{
 		return the_size;
+	}
+	void Print()
+	{
+		for(int i = 0; i < the_size; ++i)
+		{
+			std::cout << "\n" <<the_table[i].Key << " " << the_table[i].Value << "\n";
+		}
 	}
 };
