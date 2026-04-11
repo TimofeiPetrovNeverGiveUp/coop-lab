@@ -52,6 +52,10 @@ private:
 				where[index].Key = key;
 				where[index].state = 1;
 				the_count++;
+				if (((the_count / (the_size * 1.0)) > the_stop) && helpy)
+				{
+					ReHash();
+				}
 				return;
 			}
 			else if (where[index].state == 1 && key == where[index].Key)
@@ -59,10 +63,6 @@ private:
 				where[index].Value = value;
 				return;
 			}
-		}
-		if ((the_count / (the_size * 1.0)) > the_stop && helpy)
-		{
-			ReHash();
 		}
 	}
 public:
