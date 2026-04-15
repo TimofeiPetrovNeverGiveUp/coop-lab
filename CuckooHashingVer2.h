@@ -37,8 +37,8 @@ private:
 	size_t h2index(TKey key) //get_index
 	{
 		//return (std::hash<TKey>{}(key) * 1000003 + 3) % the_size;
-		return (key * 0x9e3779b9) % the_size; //только для INT
-		//return (std::hash<TKey>{}(key) * 0x9e3779b9) % the_size;
+		//return (key * 0x9e3779b9) % the_size; //С‚РѕР»СЊРєРѕ РґР»СЏ INT
+		return (std::hash<TKey>{}(key) * 0x9e3779b9) % the_size;
 	}
 	//hash functions
 
@@ -47,7 +47,7 @@ private:
 	{
 		HashTableRec ret;
 		the_insert_index_total++;
-		if ((iters_count >= the_size - 1) && helpy)// than we got цикл
+		if ((iters_count >= the_size - 1) && helpy)// than we got С†РёРєР»
 		{
 			ReHash();
 			ret.Key = key;
@@ -55,9 +55,12 @@ private:
 			ret.State = -152;
 			return ret;
 		}
-		if ((iters_count >= the_size - 1) && !helpy)// than we got цикл
+		if ((iters_count >= the_size - 1) && !helpy)// than we got С†РёРєР»
 		{
 			std::cout << "REHASH DIDNT HELP!!!\n";
+			ret.Key = key;
+			ret.Value = value;
+			ret.State = -154;
 			return ret;
 		}
 		size_t index1 = h1index(key);
@@ -87,29 +90,36 @@ private:
 			HashTableRec get_out = where[index_get_out];
 			where[index_get_out].Key = key;
 			where[index_get_out].Value = value;
-			Insert(get_out.Key, get_out.Value, last_hash_used, where, helpy);
+			ret = Insert(get_out.Key, get_out.Value, last_hash_used, where, helpy);
+			return ret;
 		}
 	}
 	void ReHash()
 	{
-		//changing parametrs
+		HashTableRec ret;
+		ret.State = -154;
 		int old_size = the_size;
-		the_size *= 2; //the_size * 2
-		//changing parametrs
-		//local
-		HashTableRec* the_table2 = new HashTableRec[the_size];
-		//local
-		for (int i = 0; i < old_size; ++i)
+		while (ret.State == -154)
 		{
-			if (the_table[i].State == 1)
+			std::cout << "REHASH \n";
+			//changing parametrs
+			the_size *= 2; //the_size * 2
+			//changing parametrs
+			//local
+			HashTableRec* the_table2 = new HashTableRec[the_size];
+			//local
+			for (int i = 0; i < old_size; ++i)
 			{
-				iters_count = 0;
-				Insert(the_table[i].Key, the_table[i].Value, -1, the_table2, false);
+				if (the_table[i].State == 1)
+				{
+					iters_count = 0;
+					ret = Insert(the_table[i].Key, the_table[i].Value, -1, the_table2, false);
+					if (ret.State == -154) continue;
+				}
 			}
+			delete[] the_table;
+			the_table = the_table2;
 		}
-
-		delete[] the_table;
-		the_table = the_table2;
 	}
 	//private functions
 public:
@@ -131,6 +141,7 @@ public:
 		HashTableRec ret = Insert(key, value, -1, the_table, true);
 		while (ret.State == -152)
 		{
+			iters_count = 0;
 			ret = Insert(ret.Key, ret.Value, -1, the_table, true);
 		}
 	}
